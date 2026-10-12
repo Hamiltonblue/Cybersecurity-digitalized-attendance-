@@ -1,0 +1,6 @@
+{
+  "name": "UniPass - Smart University Attendance System",
+  "description": "Mobile-first anti-proxy university lecture attendance system with 1-minute rolling passcodes, JAMB registration verification, single-device session locking, and high-contrast projector display.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
