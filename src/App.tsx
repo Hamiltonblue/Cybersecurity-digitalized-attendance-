@@ -7,6 +7,8 @@ import { RosterManager } from './components/RosterManager.tsx';
 import { StudentAttendanceStats } from './components/StudentAttendanceStats.tsx';
 import { AdminLoginModal } from './components/AdminLoginModal.tsx';
 import { SecurityModal } from './components/SecurityModal.tsx';
+import { StudentOnboardingModal } from './components/StudentOnboardingModal.tsx';
+import { OfflineIndicator } from './components/OfflineIndicator.tsx';
 import { AttendanceApiService } from './services/api.ts';
 import { SessionPublicInfo } from './types/attendance.ts';
 
@@ -16,12 +18,21 @@ export default function App() {
   const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(false);
   const [isSecurityModalOpen, setIsSecurityModalOpen] = useState<boolean>(false);
+  const [isOnboardingOpen, setIsOnboardingOpen] = useState<boolean>(false);
   const [selectedJambForCheckIn, setSelectedJambForCheckIn] = useState<string>('');
-  const [selectedJambForStats, setSelectedJambForStats] = useState<string>('2024/104829AB');
+  const [selectedJambForStats, setSelectedJambForStats] = useState<string>('');
 
-  // Check existing session auth on initial mount
+  // Check existing session auth and first-time onboarding prompt on mount
   useEffect(() => {
     setIsAdminAuthenticated(AttendanceApiService.isAdminAuthenticated());
+    try {
+      const dismissed = localStorage.getItem('unipass_onboarding_dismissed');
+      if (dismissed !== 'true') {
+        setIsOnboardingOpen(true);
+      }
+    } catch {
+      // ignore
+    }
   }, []);
 
   // Poll public session state for active indicator
@@ -99,6 +110,7 @@ export default function App() {
           onOpenAdminLogin={() => setIsLoginModalOpen(true)}
           onAdminLogout={handleAdminLogout}
           onOpenSecurityModal={() => setIsSecurityModalOpen(true)}
+          onOpenOnboarding={() => setIsOnboardingOpen(true)}
         />
       )}
 
@@ -111,6 +123,7 @@ export default function App() {
             onGoToProjector={() => setActiveTab('projector')}
             onGoToDirectory={() => setActiveTab('roster')}
             onGoToMyStats={handleNavigateToStats}
+            onOpenOnboarding={() => setIsOnboardingOpen(true)}
             onOpenAdminLogin={() => setIsLoginModalOpen(true)}
             isAdminAuthenticated={isAdminAuthenticated}
             prefilledJamb={selectedJambForCheckIn}
@@ -168,6 +181,19 @@ export default function App() {
         isOpen={isSecurityModalOpen}
         onClose={() => setIsSecurityModalOpen(false)}
       />
+
+      {/* Student First-Time & Replayable Onboarding Guide Modal */}
+      <StudentOnboardingModal
+        isOpen={isOnboardingOpen}
+        onClose={() => setIsOnboardingOpen(false)}
+        onStartCheckIn={() => {
+          setIsOnboardingOpen(false);
+          setActiveTab('student');
+        }}
+      />
+
+      {/* Lecture Hall Offline Connectivity Toast */}
+      <OfflineIndicator />
     </div>
   );
 }

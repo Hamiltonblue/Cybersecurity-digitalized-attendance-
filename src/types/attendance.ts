@@ -15,6 +15,7 @@ export interface Course {
   lecturerName: string;
   hallLocation: string;
   department: string;
+  level?: string;
   totalLectures: number;
   createdAt: number;
 }

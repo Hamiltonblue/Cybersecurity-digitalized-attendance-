@@ -45,12 +45,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
   onRefreshSessionState,
   onLockAdmin,
 }) => {
-  // Session Configuration Form State
-  const [selectedCourseId, setSelectedCourseId] = useState('course-csc401');
-  const [courseCode, setCourseCode] = useState('CSC 401');
-  const [courseTitle, setCourseTitle] = useState('Distributed Computing & Cloud Architecture');
-  const [hallLocation, setHallLocation] = useState('ETF Lecture Theatre 1');
-  const [lecturerName, setLecturerName] = useState('Dr. E. O. Babalola');
+  // Session Configuration Form State: Clean slate for Redeemer's University Cybersecurity
+  const [selectedCourseId, setSelectedCourseId] = useState('NEW');
+  const [courseCode, setCourseCode] = useState('');
+  const [courseTitle, setCourseTitle] = useState('');
+  const [hallLocation, setHallLocation] = useState('Science Complex CYB Lab 1');
+  const [lecturerName, setLecturerName] = useState('');
+  const [courseLevel, setCourseLevel] = useState('400L');
   const [durationMinutes, setDurationMinutes] = useState(5);
   const [passcodeIntervalSeconds, setPasscodeIntervalSeconds] = useState(60); // 1 minute default
 
@@ -199,6 +200,52 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
     }
   };
 
+  // Wipe All Data Completely (Clean Slate)
+  const handleClearAllSystemData = async () => {
+    if (!confirm('Are you sure you want to completely wipe all courses, student rosters, session records, and logs? This will reset the platform to a 100% clean slate.')) {
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const res = await AttendanceApiService.clearAllData();
+      setActionSuccess(res.message || 'System wiped clean. 0 courses and 0 students.');
+      setActiveSession(null);
+      setRecords([]);
+      setFlaggedAttempts([]);
+      setStudents([]);
+      setCourses([]);
+      setSelectedCourseId('NEW');
+      setCourseCode('');
+      setCourseTitle('');
+      setLecturerName('');
+      if (onRefreshSessionState) onRefreshSessionState();
+      refreshData();
+      setTimeout(() => setActionSuccess(null), 4000);
+    } catch {
+      // Error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load Redeemer's University Cybersecurity Sample Cohort
+  const handleSeedRunCybData = async () => {
+    setIsLoading(true);
+    try {
+      const res = await AttendanceApiService.seedRunCybData();
+      if (res.success) {
+        setActionSuccess(res.message || "Loaded Redeemer's University Cybersecurity courses and student roster.");
+        refreshData();
+        if (onRefreshSessionState) onRefreshSessionState();
+        setTimeout(() => setActionSuccess(null), 4000);
+      }
+    } catch {
+      // Error
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Export CSV Direct Download
   const handleDownloadCsv = () => {
     if (typeof window === 'undefined') return;
@@ -247,7 +294,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
           <div>
             <div className="flex items-center gap-2 mb-1">
               <span className="text-xs font-mono uppercase tracking-widest text-emerald-400 font-semibold block">
-                Course Representative Command Hub
+                Redeemer's University · Department of Cybersecurity
               </span>
               <span className="text-xs text-slate-400">· Multi-Session Continuity</span>
             </div>
@@ -302,6 +349,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
             >
               <Users className="w-4 h-4 text-emerald-400" />
               <span>Master Roster ({students.length})</span>
+            </button>
+
+            <button
+              onClick={handleSeedRunCybData}
+              disabled={isLoading}
+              className="px-3 py-2 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 rounded-xl text-xs font-medium border border-emerald-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Preload realistic Redeemer's University Cybersecurity sample courses and cohort"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Load Starter Cohort</span>
+            </button>
+
+            <button
+              onClick={handleClearAllSystemData}
+              disabled={isLoading}
+              className="px-3 py-2 bg-slate-900 hover:bg-rose-950/70 text-slate-400 hover:text-rose-300 rounded-xl text-xs font-medium border border-slate-800 hover:border-rose-500/40 flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Completely wipe all courses, rosters, and sessions for fresh entry"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Wipe All Data</span>
             </button>
 
             {onLockAdmin && (
@@ -720,10 +787,26 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="text"
                   value={courseCode}
                   onChange={(e) => setCourseCode(e.target.value)}
-                  placeholder="e.g. CSC 401"
+                  placeholder="e.g. CYB 401"
                   required
                   className="w-full h-10 px-3 rounded-xl bg-slate-900 border border-slate-700 text-white font-mono text-sm focus:border-emerald-500"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  Academic Level
+                </label>
+                <select
+                  value={courseLevel}
+                  onChange={(e) => setCourseLevel(e.target.value)}
+                  className="w-full h-10 px-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:border-emerald-500"
+                >
+                  <option value="100L">100 Level</option>
+                  <option value="200L">200 Level</option>
+                  <option value="300L">300 Level</option>
+                  <option value="400L">400 Level (Final Year)</option>
+                </select>
               </div>
 
               <div className="space-y-1.5">
@@ -741,7 +824,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                 </select>
               </div>
 
-              <div className="sm:col-span-2 space-y-1.5">
+              <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wider text-slate-300">
                   Course Title
                 </label>
@@ -749,7 +832,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="text"
                   value={courseTitle}
                   onChange={(e) => setCourseTitle(e.target.value)}
-                  placeholder="e.g. Distributed Computing & Cloud Architecture"
+                  placeholder="e.g. Digital Forensics & Incident Response"
                   required
                   className="w-full h-10 px-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:border-emerald-500"
                 />
@@ -763,7 +846,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="text"
                   value={hallLocation}
                   onChange={(e) => setHallLocation(e.target.value)}
-                  placeholder="e.g. ETF Lecture Theatre 1"
+                  placeholder="e.g. Science Complex CYB Lab 1"
                   required
                   className="w-full h-10 px-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:border-emerald-500"
                 />
@@ -777,7 +860,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({
                   type="text"
                   value={lecturerName}
                   onChange={(e) => setLecturerName(e.target.value)}
-                  placeholder="e.g. Dr. E. O. Babalola"
+                  placeholder="e.g. Dr. / Prof. ..."
                   className="w-full h-10 px-3 rounded-xl bg-slate-900 border border-slate-700 text-white text-sm focus:border-emerald-500"
                 />
               </div>

@@ -8,7 +8,9 @@ import {
   Lock,
   KeyRound,
   GraduationCap,
+  HelpCircle,
 } from 'lucide-react';
+import { PWAInstallButton } from './PWAInstallButton.tsx';
 
 export type ActiveTab = 'student' | 'admin' | 'projector' | 'roster' | 'my-stats';
 
@@ -21,6 +23,7 @@ interface NavbarProps {
   onOpenAdminLogin: () => void;
   onAdminLogout: () => void;
   onOpenSecurityModal: () => void;
+  onOpenOnboarding: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -32,21 +35,25 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenAdminLogin,
   onAdminLogout,
   onOpenSecurityModal,
+  onOpenOnboarding,
 }) => {
   return (
     <header className="sticky top-0 z-50 bg-slate-950/95 backdrop-blur-md border-b border-slate-800 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4 md:gap-8">
         {/* Zone 1: Brand Wordmark */}
-        <div className="flex items-center gap-3 shrink-0">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0">
             <ShieldCheck className="w-5 h-5" />
           </div>
           <button
             onClick={() => onTabChange('student')}
             className="text-left group cursor-pointer focus:outline-none"
           >
-            <span className="text-lg font-bold tracking-tight text-white block group-hover:text-emerald-400 transition-colors whitespace-nowrap">
-              UniPass<span className="text-emerald-400 text-xs font-mono ml-1 font-semibold">NG</span>
+            <span className="text-base sm:text-lg font-bold tracking-tight text-white block group-hover:text-emerald-400 transition-colors whitespace-nowrap">
+              RUN<span className="text-emerald-400">-CyberPass</span>
+            </span>
+            <span className="hidden sm:block text-[10px] text-slate-400 -mt-0.5 tracking-wider font-mono">
+              Redeemer's University · CYB
             </span>
           </button>
         </div>
@@ -127,10 +134,23 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/80 border border-emerald-500/40 text-emerald-300 text-xs font-mono tabular-nums">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
               <span className="font-semibold whitespace-nowrap">
-                {activeCourseCode || 'CSC 401'} Live
+                {activeCourseCode || 'CYB 401'} Live
               </span>
             </div>
           )}
+
+          {/* Student Onboarding Guide Trigger */}
+          <button
+            onClick={onOpenOnboarding}
+            className="px-2.5 py-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-900 hover:bg-slate-800 rounded-lg border border-slate-700/80 hover:border-sky-500/50 transition-colors flex items-center gap-1.5 cursor-pointer"
+            title="Open Student Attendance Guide & Rules"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-sky-400" />
+            <span className="hidden sm:inline">Guide</span>
+          </button>
+
+          {/* PWA Home Screen Installation Button */}
+          <PWAInstallButton variant="compact" />
 
           {/* Security Shield Modal Trigger */}
           <button
@@ -209,6 +229,13 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <Users className="w-3.5 h-3.5" />
           <span>Directory</span>
+        </button>
+        <button
+          onClick={onOpenOnboarding}
+          className="px-2 py-1.5 rounded-md flex items-center gap-1 text-slate-400 hover:text-white"
+        >
+          <HelpCircle className="w-3.5 h-3.5 text-sky-400" />
+          <span>Guide</span>
         </button>
 
         {isAdminAuthenticated ? (

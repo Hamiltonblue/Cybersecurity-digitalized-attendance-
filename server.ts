@@ -34,52 +34,11 @@ function getPasscodeForInterval(sessionId: string, intervalIndex: number): strin
   return codeNum.toString();
 }
 
-// In-Memory Database Store
-let masterStudents: Student[] = [...SEED_STUDENTS];
+// In-Memory Database Store: Clean slate for Redeemer's University Cybersecurity
+let masterStudents: Student[] = [];
 
-// Registered Courses
-let masterCourses: Course[] = [
-  {
-    id: 'course-csc401',
-    code: 'CSC 401',
-    title: 'Distributed Computing & Cloud Architecture',
-    lecturerName: 'Dr. E. O. Babalola',
-    hallLocation: 'ETF Lecture Theatre 1',
-    department: 'Computer Science',
-    totalLectures: 5,
-    createdAt: Date.now() - 30 * 24 * 60 * 60 * 1000,
-  },
-  {
-    id: 'course-csc415',
-    code: 'CSC 415',
-    title: 'Cryptography & Network Security',
-    lecturerName: 'Prof. O. K. Adeleke',
-    hallLocation: 'Computer Lab 2B',
-    department: 'Computer Science',
-    totalLectures: 3,
-    createdAt: Date.now() - 25 * 24 * 60 * 60 * 1000,
-  },
-  {
-    id: 'course-mth301',
-    code: 'MTH 301',
-    title: 'Numerical Analysis & Differential Equations',
-    lecturerName: 'Dr. Mrs. A. Funmilayo',
-    hallLocation: 'Faculty Large Auditorium B',
-    department: 'Computer Science & Maths',
-    totalLectures: 4,
-    createdAt: Date.now() - 28 * 24 * 60 * 60 * 1000,
-  },
-  {
-    id: 'course-csc421',
-    code: 'CSC 421',
-    title: 'Software Engineering & Agile Methodologies',
-    lecturerName: 'Engr. K. Balogun',
-    hallLocation: 'Departmental Seminar Room',
-    department: 'Computer Science',
-    totalLectures: 2,
-    createdAt: Date.now() - 14 * 24 * 60 * 60 * 1000,
-  },
-];
+// Registered Courses: Clean slate for Redeemer's University Cybersecurity
+let masterCourses: Course[] = [];
 
 let activeSession: AttendanceSession | null = null;
 let completedSessions: AttendanceSession[] = [];
@@ -100,134 +59,6 @@ interface RateLimitEntry {
   lockoutUntil: number;
 }
 const bruteForceTracker: Map<string, RateLimitEntry> = new Map();
-
-// Deterministic historical attendance generator for seed lectures
-function seedHistoricalLectureSessions() {
-  const ONE_DAY = 24 * 60 * 60 * 1000;
-  const now = Date.now();
-
-  // Helper to seed a completed lecture session with realistic student attendance
-  const createPastSession = (
-    course: Course,
-    lectureNum: number,
-    daysAgo: number,
-    hall: string,
-    attendanceProbability: number
-  ) => {
-    const sessionStartTime = now - daysAgo * ONE_DAY - 2 * 60 * 60 * 1000;
-    const durationMs = 5 * 60 * 1000;
-    const sessId = `session-${course.code.toLowerCase().replace(/\s+/g, '')}-lec${lectureNum}`;
-
-    const pastSession: AttendanceSession = {
-      id: sessId,
-      courseId: course.id,
-      lectureNumber: lectureNum,
-      courseCode: course.code,
-      courseTitle: course.title,
-      lecturerName: course.lecturerName,
-      courseRepName: 'David Adeleke (Class Rep)',
-      hallLocation: hall,
-      startTime: sessionStartTime,
-      durationMs,
-      expiresAt: sessionStartTime + durationMs,
-      status: 'completed',
-      currentPasscode: getPasscodeForInterval(sessId, 4),
-      previousPasscode: getPasscodeForInterval(sessId, 3),
-      passcodeRotatedAt: sessionStartTime + 4 * 60 * 1000,
-      passcodeExpiresAt: sessionStartTime + durationMs,
-      passcodeIntervalMs: 60 * 1000,
-    };
-
-    completedSessions.push(pastSession);
-
-    // Create realistic attendance records for master students
-    masterStudents.forEach((student, index) => {
-      // Deterministic variation: top students attend almost all, some have 70-80%, few have < 50%
-      const studentSeed = (student.jambRegNo.charCodeAt(student.jambRegNo.length - 1) + lectureNum * 7 + index) % 100;
-      const attended = studentSeed < (attendanceProbability * 100);
-
-      if (attended) {
-        const checkInOffset = 30 * 1000 + (studentSeed * 2500); // 30s to 4.5 mins in
-        const recordTime = sessionStartTime + checkInOffset;
-        const recordId = `rec-${sessId}-${student.jambRegNo.replace(/[^a-zA-Z0-9]/g, '')}`;
-        attendanceRecords.push({
-          id: recordId,
-          sessionId: sessId,
-          courseId: course.id,
-          courseCode: course.code,
-          lectureNumber: lectureNum,
-          jambRegNo: student.jambRegNo,
-          studentName: student.fullName,
-          matricNo: student.matricNo,
-          department: student.department,
-          deviceId: `dev-hist-${index}-${lectureNum}`,
-          deviceInfo: 'Mozilla/5.0 Mobile Device',
-          hardwareHash: `hw-hash-${index}`,
-          timestamp: recordTime,
-          status: 'verified',
-        });
-      }
-    });
-  };
-
-  // 1. Seed CSC 401: Lectures 1 to 4 completed
-  const csc401 = masterCourses[0];
-  createPastSession(csc401, 1, 21, 'ETF Lecture Theatre 1', 0.90);
-  createPastSession(csc401, 2, 14, 'ETF Lecture Theatre 1', 0.85);
-  createPastSession(csc401, 3, 7, 'ETF Lecture Theatre 1', 0.80);
-  createPastSession(csc401, 4, 3, 'ETF Lecture Theatre 1', 0.86);
-
-  // 2. Seed CSC 415: Lectures 1 to 3 completed
-  const csc415 = masterCourses[1];
-  createPastSession(csc415, 1, 18, 'Computer Lab 2B', 0.88);
-  createPastSession(csc415, 2, 11, 'Computer Lab 2B', 0.82);
-  createPastSession(csc415, 3, 4, 'Computer Lab 2B', 0.78);
-
-  // 3. Seed MTH 301: Lectures 1 to 4 completed
-  const mth301 = masterCourses[2];
-  createPastSession(mth301, 1, 24, 'Faculty Auditorium B', 0.92);
-  createPastSession(mth301, 2, 17, 'Faculty Auditorium B', 0.84);
-  createPastSession(mth301, 3, 10, 'Faculty Auditorium B', 0.76);
-  createPastSession(mth301, 4, 2, 'Faculty Auditorium B', 0.80);
-
-  // 4. Seed CSC 421: Lectures 1 to 2 completed
-  const csc421 = masterCourses[3];
-  createPastSession(csc421, 1, 12, 'Departmental Seminar Room', 0.85);
-  createPastSession(csc421, 2, 5, 'Departmental Seminar Room', 0.88);
-}
-
-// Initialize active session as Lecture 5 of CSC 401 so the live continuation is immediately apparent
-function initializeActiveSession() {
-  const now = Date.now();
-  const sessionId = 'session-csc401-lec5-live';
-  const durationMs = 5 * 60 * 1000;
-  const intervalMs = 60 * 1000;
-  const currentInterval = 0;
-
-  activeSession = {
-    id: sessionId,
-    courseId: 'course-csc401',
-    lectureNumber: 5, // Continues automatically from Lectures 1-4!
-    courseCode: 'CSC 401',
-    courseTitle: 'Distributed Computing & Cloud Architecture',
-    lecturerName: 'Dr. E. O. Babalola',
-    courseRepName: 'David Adeleke (Class Rep)',
-    hallLocation: 'ETF Lecture Theatre 1',
-    startTime: now,
-    durationMs,
-    expiresAt: now + durationMs,
-    status: 'active',
-    currentPasscode: getPasscodeForInterval(sessionId, currentInterval),
-    previousPasscode: getPasscodeForInterval(sessionId, currentInterval),
-    passcodeRotatedAt: now,
-    passcodeExpiresAt: now + intervalMs,
-    passcodeIntervalMs: intervalMs,
-  };
-}
-
-// Seed on startup
-seedHistoricalLectureSessions();
-initializeActiveSession();
 
 function getSessionState() {
   if (!activeSession) return null;
@@ -329,7 +160,7 @@ async function startServer() {
   // 1. Admin Login Verification
   app.post('/api/admin/login', (req, res) => {
     const { password } = req.body;
-    const validPasswords = ['rep2024', 'admin123', 'unipass2024', 'csc401'];
+    const validPasswords = ['rep2024', 'admin123', 'unipass2024', 'csc401', 'cyberpass', 'cyb2024', 'run2024'];
     if (password && validPasswords.includes(password.trim())) {
       const token = 'rep_auth_' + Date.now() + '_' + Math.random().toString(36).substring(2, 8);
       activeAdminTokens.add(token);
@@ -448,10 +279,10 @@ async function startServer() {
       targetCourse = masterCourses.find(c => c.code.toUpperCase() === codeClean);
     }
 
-    const finalCode = targetCourse?.code || sanitizeText(courseCode || 'CSC 401', 20).toUpperCase();
-    const finalTitle = targetCourse?.title || sanitizeText(courseTitle || 'Distributed Computing & Cloud Architecture', 100);
-    const finalLecturer = targetCourse?.lecturerName || sanitizeText(lecturerName || 'Dr. E. O. Babalola', 60);
-    const finalHall = targetCourse?.hallLocation || sanitizeText(hallLocation || 'ETF Lecture Theatre 1', 60);
+    const finalCode = targetCourse?.code || sanitizeText(courseCode || 'CYB 401', 20).toUpperCase();
+    const finalTitle = targetCourse?.title || sanitizeText(courseTitle || 'Cybersecurity & Defense Systems', 100);
+    const finalLecturer = targetCourse?.lecturerName || sanitizeText(lecturerName || 'Departmental Lecturer', 60);
+    const finalHall = targetCourse?.hallLocation || sanitizeText(hallLocation || 'Science Complex CYB Lab', 60);
 
     // Compute continuing lecture number for this course
     const allPastSessionsForCourse = completedSessions.filter(
@@ -468,7 +299,7 @@ async function startServer() {
         title: finalTitle,
         lecturerName: finalLecturer,
         hallLocation: finalHall,
-        department: 'Computer Science',
+        department: 'Cybersecurity',
         totalLectures: nextLectureNumber,
         createdAt: now,
       };
@@ -829,8 +660,8 @@ async function startServer() {
     const newStudent: Student = {
       jambRegNo: cleanJamb,
       fullName: cleanName,
-      matricNo: matricNo ? sanitizeText(matricNo, 20).toUpperCase() : `CSC/${Date.now().toString().slice(-4)}`,
-      department: department ? sanitizeText(department, 40) : 'Computer Science',
+      matricNo: matricNo ? sanitizeText(matricNo, 25).toUpperCase() : `RUN/CYB/${new Date().getFullYear().toString().slice(-2)}/${Math.floor(1000 + Math.random() * 9000)}`,
+      department: department ? sanitizeText(department, 40) : 'Cybersecurity',
       level: level ? sanitizeText(level, 10) : '400L',
       createdAt: Date.now(),
     };
@@ -854,8 +685,8 @@ async function startServer() {
           masterStudents.push({
             jambRegNo: cleanJamb,
             fullName: sanitizeText(item.fullName, 80),
-            matricNo: item.matricNo ? sanitizeText(item.matricNo, 20).toUpperCase() : `GEN/${Math.floor(1000 + Math.random() * 9000)}`,
-            department: item.department ? sanitizeText(item.department, 40) : 'Computer Science',
+            matricNo: item.matricNo ? sanitizeText(item.matricNo, 25).toUpperCase() : `RUN/CYB/${new Date().getFullYear().toString().slice(-2)}/${Math.floor(1000 + Math.random() * 9000)}`,
+            department: item.department ? sanitizeText(item.department, 40) : 'Cybersecurity',
             level: item.level ? sanitizeText(item.level, 10) : '400L',
             createdAt: Date.now(),
           });
@@ -869,8 +700,190 @@ async function startServer() {
 
   // 11. Reset Student Roster (Course Rep Only)
   app.post('/api/students/reset', requireAdminAuth, (_req, res) => {
-    masterStudents = [...SEED_STUDENTS];
-    return res.json({ success: true, count: masterStudents.length });
+    masterStudents = [];
+    return res.json({ success: true, count: 0 });
+  });
+
+  // 11a. Clear Everything - 100% Pristine Clean Slate (Course Rep Only)
+  app.post('/api/system/clear-all', requireAdminAuth, (_req, res) => {
+    masterStudents = [];
+    masterCourses = [];
+    completedSessions = [];
+    attendanceRecords = [];
+    flaggedAttempts = [];
+    activeSession = null;
+    deviceLocks.clear();
+    hardwareLocks.clear();
+    return res.json({
+      success: true,
+      message: "System wiped clean. 0 courses, 0 students, 0 records.",
+      studentsCount: 0,
+      coursesCount: 0,
+    });
+  });
+
+  // 11b. Load Redeemer's University Cybersecurity Sample Cohort (Course Rep Only)
+  app.post('/api/seed/run-cyb', requireAdminAuth, (_req, res) => {
+    const starterCourses: Course[] = [
+      {
+        id: 'course-cyb401',
+        code: 'CYB 401',
+        title: 'Digital Forensics & Incident Response',
+        lecturerName: 'Dr. A. Adebayo',
+        hallLocation: 'Science Complex CYB Lab 1',
+        department: 'Cybersecurity',
+        level: '400L',
+        totalLectures: 0,
+        createdAt: Date.now() - 86400000 * 7,
+      },
+      {
+        id: 'course-cyb301',
+        code: 'CYB 301',
+        title: 'Cryptographic Protocols & Defense Mechanisms',
+        lecturerName: 'Prof. O. Oladipo',
+        hallLocation: 'ETF Lecture Theatre 2',
+        department: 'Cybersecurity',
+        level: '300L',
+        totalLectures: 0,
+        createdAt: Date.now() - 86400000 * 6,
+      },
+      {
+        id: 'course-cyb201',
+        code: 'CYB 201',
+        title: 'Fundamentals of Cybersecurity & Information Assurance',
+        lecturerName: 'Dr. E. Babalola',
+        hallLocation: 'Science Complex Hall A',
+        department: 'Cybersecurity',
+        level: '200L',
+        totalLectures: 0,
+        createdAt: Date.now() - 86400000 * 5,
+      },
+      {
+        id: 'course-cyb101',
+        code: 'CYB 101',
+        title: 'Introduction to Computing & Cyber Hygiene',
+        lecturerName: 'Mr. T. Balogun',
+        hallLocation: 'New Science Auditorium',
+        department: 'Cybersecurity',
+        level: '100L',
+        totalLectures: 0,
+        createdAt: Date.now() - 86400000 * 4,
+      },
+    ];
+
+    const starterStudents: Student[] = [
+      {
+        jambRegNo: '2024/778899AA',
+        matricNo: 'RUN/CYB/21/0045',
+        fullName: 'Oluwaseun Emmanuel Adeyemi',
+        department: 'Cybersecurity',
+        level: '400L',
+        createdAt: Date.now(),
+      },
+      {
+        jambRegNo: '2024/778899BB',
+        matricNo: 'RUN/CYB/21/0088',
+        fullName: 'Amina Fatima Danjuma',
+        department: 'Cybersecurity',
+        level: '400L',
+        createdAt: Date.now(),
+      },
+      {
+        jambRegNo: '2024/778899CC',
+        matricNo: 'RUN/CYB/22/0112',
+        fullName: 'Chukwuma David Okonkwo',
+        department: 'Cybersecurity',
+        level: '300L',
+        createdAt: Date.now(),
+      },
+      {
+        jambRegNo: '2024/778899DD',
+        matricNo: 'RUN/CYB/22/0145',
+        fullName: 'Blessing Temitope Ajayi',
+        department: 'Cybersecurity',
+        level: '300L',
+        createdAt: Date.now(),
+      },
+      {
+        jambRegNo: '2024/778899EE',
+        matricNo: 'RUN/CYB/23/0204',
+        fullName: 'Favour Chidinma Eze',
+        department: 'Cybersecurity',
+        level: '200L',
+        createdAt: Date.now(),
+      },
+      {
+        jambRegNo: '2024/778899FF',
+        matricNo: 'RUN/CYB/23/0239',
+        fullName: 'Abdulmalik Sani Bello',
+        department: 'Cybersecurity',
+        level: '200L',
+        createdAt: Date.now(),
+      },
+      {
+        jambRegNo: '2024/778899GG',
+        matricNo: 'RUN/CYB/24/0301',
+        fullName: 'Precious Oluwanifemi Williams',
+        department: 'Cybersecurity',
+        level: '100L',
+        createdAt: Date.now(),
+      },
+      {
+        jambRegNo: '2024/778899HH',
+        matricNo: 'RUN/CYB/24/0344',
+        fullName: 'Daniel Kenechukwu Umeh',
+        department: 'Cybersecurity',
+        level: '100L',
+        createdAt: Date.now(),
+      },
+    ];
+
+    masterCourses = [...starterCourses];
+    masterStudents = [...starterStudents];
+
+    return res.json({
+      success: true,
+      message: "Loaded Redeemer's University Cybersecurity sample courses and cohort (100L-400L).",
+      coursesCount: masterCourses.length,
+      studentsCount: masterStudents.length,
+    });
+  });
+
+  // 11b. Create New Cybersecurity Course (Course Rep / Lecturer Only)
+  app.post('/api/courses', requireAdminAuth, (req, res) => {
+    const { code, title, lecturerName, hallLocation, level, department } = req.body;
+    if (!code || !title) {
+      return res.status(400).json({ error: 'Course Code and Title are required.' });
+    }
+
+    const cleanCode = sanitizeText(code, 20).toUpperCase();
+    const cleanTitle = sanitizeText(title, 100);
+    const existing = masterCourses.find(c => c.code.toUpperCase() === cleanCode);
+    if (existing) {
+      return res.status(409).json({ error: `Course ${cleanCode} already exists.` });
+    }
+
+    const newCourse: Course = {
+      id: 'course-' + cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '') + '-' + Date.now().toString().slice(-4),
+      code: cleanCode,
+      title: cleanTitle,
+      lecturerName: sanitizeText(lecturerName || 'Departmental Lecturer', 60),
+      hallLocation: sanitizeText(hallLocation || 'Science Complex CYB Lab', 60),
+      department: sanitizeText(department || 'Cybersecurity', 40),
+      level: sanitizeText(level || '400L', 10),
+      totalLectures: 0,
+      createdAt: Date.now(),
+    };
+
+    masterCourses.push(newCourse);
+    return res.json({ success: true, course: newCourse });
+  });
+
+  // 11c. Delete Course (Course Rep Only)
+  app.delete('/api/courses/:id', requireAdminAuth, (req, res) => {
+    const { id } = req.params;
+    masterCourses = masterCourses.filter(c => c.id !== id && c.code.toLowerCase() !== id.toLowerCase());
+    return res.json({ success: true });
   });
 
   // 12. List Registered Courses with Session Counts
@@ -1106,12 +1119,14 @@ async function startServer() {
 
     // Build CSV Headers
     const metaInfo = [
+      `Institution: Redeemer's University (RUN), Ede, Osun State`,
+      `Department: Department of Cybersecurity`,
       `Course Ledger: ${course.code} - ${course.title}`,
-      `Department: ${course.department}`,
+      `Level: ${course.level || 'Undergraduate'}`,
       `Lecturer: ${course.lecturerName}`,
       `Total Lectures Recorded: ${totalLectures}`,
       `Date Generated: ${new Date().toLocaleDateString('en-GB')}`,
-      `Senate Regulation: 75% Lecture Attendance Required for Exam Sitting`,
+      `Senate Regulation: Minimum 75% Lecture Attendance Required for Exam Sitting Clearance`,
       '',
     ].join('\n');
 

@@ -33,19 +33,18 @@ export const StudentAttendanceStats: React.FC<StudentAttendanceStatsProps> = ({
   activeCourseCode,
   initialJambQuery = '',
 }) => {
-  const [searchQuery, setSearchQuery] = useState(initialJambQuery || '2024/104829AB');
+  const [searchQuery, setSearchQuery] = useState(initialJambQuery || '');
   const [isLoading, setIsLoading] = useState(false);
   const [studentData, setStudentData] = useState<StudentSummaryStats | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [expandedCourse, setExpandedCourse] = useState<string | null>(null);
+  const [enrolledStudents, setEnrolledStudents] = useState<Array<{ fullName: string; jambRegNo: string; matricNo?: string }>>([]);
 
-  // Quick lookup suggestions for demo testing
-  const quickDemoStudents = [
-    { label: 'Chioma (High Attendance)', jamb: '2024/104829AB' },
-    { label: 'David (Course Rep)', jamb: '2024/108472CD' },
-    { label: 'Ibrahim (Regular)', jamb: '2024/119283EF' },
-    { label: 'Tunde (At Risk)', jamb: '2024/139485IJ' },
-  ];
+  useEffect(() => {
+    AttendanceApiService.getStudents().then((list) => {
+      setEnrolledStudents(list.slice(0, 6));
+    });
+  }, []);
 
   const handleSearch = async (queryToUse?: string) => {
     const q = (queryToUse || searchQuery).trim().toUpperCase();
@@ -137,7 +136,7 @@ export const StudentAttendanceStats: React.FC<StudentAttendanceStatsProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Enter your JAMB Reg No (e.g. 2024/104829AB) or Matric No..."
+              placeholder="Enter your RUN Matric No (e.g. RUN/CYB/22/0142) or JAMB Reg No..."
               className="w-full bg-slate-900 border border-slate-700/80 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 font-mono"
             />
           </div>
@@ -160,24 +159,42 @@ export const StudentAttendanceStats: React.FC<StudentAttendanceStatsProps> = ({
           </button>
         </form>
 
-        {/* Quick Demo Pickers */}
-        <div className="mt-4 pt-4 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
-          <span className="text-xs text-slate-400 font-medium">Quick Sample Check:</span>
-          {quickDemoStudents.map((demo) => (
-            <button
-              key={demo.jamb}
-              type="button"
-              onClick={() => {
-                setSearchQuery(demo.jamb);
-                handleSearch(demo.jamb);
-              }}
-              className="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-emerald-400 border border-slate-800 transition-colors cursor-pointer font-mono"
-            >
-              {demo.label}
-            </button>
-          ))}
-        </div>
+        {/* Quick Sample Check for enrolled students if available */}
+        {enrolledStudents.length > 0 && (
+          <div className="mt-4 pt-4 border-t border-slate-800/80 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-400 font-medium">Quick Sample Check:</span>
+            {enrolledStudents.map((st) => (
+              <button
+                key={st.jambRegNo}
+                type="button"
+                onClick={() => {
+                  const id = st.matricNo || st.jambRegNo;
+                  setSearchQuery(id);
+                  handleSearch(id);
+                }}
+                className="text-xs px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-emerald-400 border border-slate-800 transition-colors cursor-pointer font-mono"
+              >
+                {st.fullName.split(' ')[0]} ({st.matricNo || st.jambRegNo})
+              </button>
+            ))}
+          </div>
+        )}
       </div>
+
+      {/* Initial Clean Zero State Banner when no query has been run yet */}
+      {!studentData && !errorMessage && !isLoading && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-8 text-center max-w-xl mx-auto space-y-3 my-6">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+            <GraduationCap className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-white tracking-tight">
+            Personal Attendance & Exam Clearance Audit
+          </h3>
+          <p className="text-xs text-slate-400 leading-relaxed">
+            Enter your official Redeemer's University Matriculation number (e.g. <span className="text-emerald-400 font-mono">RUN/CYB/22/0142</span>) or JAMB Registration number above to view your lecture attendance history, individual course attendance percentage, and Redeemer's University Senate 75% exam clearance status.
+          </p>
+        </div>
+      )}
 
       {/* Error Message */}
       {errorMessage && (

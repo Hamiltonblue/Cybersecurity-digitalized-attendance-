@@ -84,7 +84,7 @@ export class AttendanceApiService {
 
     const session = getStored<AttendanceSession | null>('active_session', null);
     const records = getStored<AttendanceRecord[]>('records', []);
-    const students = getStored<Student[]>('students', SEED_STUDENTS);
+    const students = getStored<Student[]>('students', []);
 
     if (!session || Date.now() > session.expiresAt || session.status !== 'active') {
       return {
@@ -121,37 +121,27 @@ export class AttendanceApiService {
       // Fallback
     }
 
-    let session = getStored<AttendanceSession | null>('active_session', null);
+    const session = getStored<AttendanceSession | null>('active_session', null);
     const records = getStored<AttendanceRecord[]>('records', []);
     const flagged = getStored<FlaggedProxyAttempt[]>('flagged', []);
-    const students = getStored<Student[]>('students', SEED_STUDENTS);
+    const students = getStored<Student[]>('students', []);
 
     const now = Date.now();
-    if (!session) {
-      const sessionId = 'session-' + now;
-      const durationMs = 5 * 60 * 1000;
-      const intervalMs = 60 * 1000;
-      session = {
-        id: sessionId,
-        courseCode: 'CSC 401',
-        courseTitle: 'Distributed Computing & Cloud Architecture',
-        lecturerName: 'Dr. E. O. Babalola',
-        courseRepName: 'David Adeleke (Class Rep)',
-        hallLocation: 'ETF Lecture Theatre 1',
-        startTime: now,
-        durationMs,
-        expiresAt: now + durationMs,
-        status: 'active',
-        currentPasscode: generateLocalPasscode(sessionId, 0),
-        previousPasscode: generateLocalPasscode(sessionId, 0),
-        passcodeRotatedAt: now,
-        passcodeExpiresAt: now + intervalMs,
-        passcodeIntervalMs: intervalMs,
+    if (!session || session.status !== 'active') {
+      return {
+        session: null,
+        records: [],
+        recentRecords: [],
+        flaggedCount: 0,
+        stats: {
+          total: students.length,
+          checkedIn: 0,
+          percentage: '0.0',
+        },
       };
-      setStored('active_session', session);
     }
 
-    const sessionRecords = records.filter(r => r.sessionId === session!.id);
+    const sessionRecords = records.filter(r => r.sessionId === session.id);
     const sessionSecondsRemaining = Math.max(0, Math.ceil((session.expiresAt - now) / 1000));
     const passcodeSecondsRemaining = Math.max(0, Math.ceil((session.passcodeExpiresAt - now) / 1000));
 
@@ -163,11 +153,11 @@ export class AttendanceApiService {
       },
       records: sessionRecords,
       recentRecords: sessionRecords.slice(-10).reverse(),
-      flaggedCount: flagged.filter(f => f.sessionId === session!.id).length,
+      flaggedCount: flagged.filter(f => f.sessionId === session.id).length,
       stats: {
         total: students.length,
         checkedIn: sessionRecords.length,
-        percentage: ((sessionRecords.length / students.length) * 100).toFixed(1),
+        percentage: students.length > 0 ? ((sessionRecords.length / students.length) * 100).toFixed(1) : '0.0',
       },
     };
   }
@@ -398,11 +388,11 @@ export class AttendanceApiService {
       id: sessionId,
       courseId: data.courseId,
       lectureNumber: 1,
-      courseCode: data.courseCode || 'CSC 401',
-      courseTitle: data.courseTitle || 'Distributed Computing',
-      lecturerName: data.lecturerName || 'Dr. E. O. Babalola',
-      courseRepName: data.courseRepName || 'David Adeleke',
-      hallLocation: data.hallLocation || 'ETF Lecture Theatre 1',
+      courseCode: data.courseCode || 'CYB 401',
+      courseTitle: data.courseTitle || 'Digital Forensics & Incident Response',
+      lecturerName: data.lecturerName || 'Dr. A. Adebayo',
+      courseRepName: data.courseRepName || 'Departmental Course Rep',
+      hallLocation: data.hallLocation || 'Science Complex CYB Lab 1',
       startTime: now,
       durationMs,
       expiresAt: now + durationMs,
@@ -450,49 +440,53 @@ export class AttendanceApiService {
     }
 
     return {
-      courses: [
-        {
-          id: 'course-csc401',
-          code: 'CSC 401',
-          title: 'Distributed Computing & Cloud Architecture',
-          lecturerName: 'Dr. E. O. Babalola',
-          hallLocation: 'ETF Lecture Theatre 1',
-          department: 'Computer Science',
-          totalLectures: 5,
-          createdAt: Date.now() - 30 * 24 * 60 * 60 * 1000,
-        },
-        {
-          id: 'course-csc415',
-          code: 'CSC 415',
-          title: 'Cryptography & Network Security',
-          lecturerName: 'Prof. O. K. Adeleke',
-          hallLocation: 'Computer Lab 2B',
-          department: 'Computer Science',
-          totalLectures: 3,
-          createdAt: Date.now() - 25 * 24 * 60 * 60 * 1000,
-        },
-        {
-          id: 'course-mth301',
-          code: 'MTH 301',
-          title: 'Numerical Analysis & Differential Equations',
-          lecturerName: 'Dr. Mrs. A. Funmilayo',
-          hallLocation: 'Faculty Auditorium B',
-          department: 'Computer Science & Maths',
-          totalLectures: 4,
-          createdAt: Date.now() - 28 * 24 * 60 * 60 * 1000,
-        },
-        {
-          id: 'course-csc421',
-          code: 'CSC 421',
-          title: 'Software Engineering & Agile Methodologies',
-          lecturerName: 'Engr. K. Balogun',
-          hallLocation: 'Departmental Seminar Room',
-          department: 'Computer Science',
-          totalLectures: 2,
-          createdAt: Date.now() - 14 * 24 * 60 * 60 * 1000,
-        },
-      ],
+      courses: getStored<Course[]>('courses', []),
     };
+  }
+
+  // Create Course (Course Rep Only)
+  static async createCourse(courseData: {
+    code: string;
+    title: string;
+    lecturerName?: string;
+    hallLocation?: string;
+    level?: string;
+    department?: string;
+  }): Promise<{ success: boolean; course?: Course; error?: string }> {
+    try {
+      const res = await fetch('/api/courses', {
+        method: 'POST',
+        headers: this.getAdminAuthHeaders(),
+        body: JSON.stringify(courseData),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.course) {
+        const storedCourses = getStored<Course[]>('courses', []);
+        setStored('courses', [...storedCourses, data.course]);
+      }
+      return data;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Network error creating course';
+      return { success: false, error: msg };
+    }
+  }
+
+  // Delete Course (Course Rep Only)
+  static async deleteCourse(courseId: string): Promise<{ success: boolean }> {
+    try {
+      const res = await fetch(`/api/courses/${encodeURIComponent(courseId)}`, {
+        method: 'DELETE',
+        headers: this.getAdminAuthHeaders(),
+      });
+      if (res.ok) {
+        const storedCourses = getStored<Course[]>('courses', []);
+        setStored('courses', storedCourses.filter(c => c.id !== courseId && c.code !== courseId));
+        return { success: true };
+      }
+      return { success: false };
+    } catch {
+      return { success: false };
+    }
   }
 
   // Get Course Ledger (Protected / Admin view)
@@ -596,8 +590,51 @@ export class AttendanceApiService {
     } catch {
       // Fallback
     }
-    setStored('students', SEED_STUDENTS);
-    return SEED_STUDENTS;
+    setStored('students', []);
+    return [];
+  }
+
+  // Clear All Data (System Clean Slate)
+  static async clearAllData(): Promise<{ success: boolean; message: string }> {
+    try {
+      const res = await fetch('/api/system/clear-all', {
+        method: 'POST',
+        headers: this.getAdminAuthHeaders(),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        setStored('students', []);
+        setStored('courses', []);
+        setStored('records', []);
+        setStored('flagged', []);
+        setStored('active_session', null);
+        return json;
+      }
+    } catch {
+      // Fallback
+    }
+    setStored('students', []);
+    setStored('courses', []);
+    setStored('records', []);
+    setStored('flagged', []);
+    setStored('active_session', null);
+    return { success: true, message: 'All data cleared locally.' };
+  }
+
+  // Seed Redeemer's University Cybersecurity Sample Cohort
+  static async seedRunCybData(): Promise<{ success: boolean; message: string; coursesCount?: number; studentsCount?: number }> {
+    try {
+      const res = await fetch('/api/seed/run-cyb', {
+        method: 'POST',
+        headers: this.getAdminAuthHeaders(),
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch {
+      // Fallback
+    }
+    return { success: false, message: 'Failed to seed sample cohort' };
   }
 
   // Override device lock
@@ -679,7 +716,7 @@ export class AttendanceApiService {
       }
       return { success: false, message: data.message || 'Incorrect password' };
     } catch {
-      const valid = ['rep2024', 'admin123', 'unipass2024', 'csc401'];
+      const valid = ['rep2024', 'admin123', 'unipass2024', 'csc401', 'cyberpass', 'cyb2024', 'run2024'];
       if (valid.includes(password.trim())) {
         if (typeof window !== 'undefined') {
           sessionStorage.setItem('unipass_admin_auth', 'true');

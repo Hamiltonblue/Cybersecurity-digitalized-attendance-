@@ -12,15 +12,18 @@ import {
   Lock,
   Download,
   Share2,
+  HelpCircle,
 } from 'lucide-react';
 import { AttendanceApiService } from '../services/api.ts';
 import { getDeviceSecurityPayload, getDeviceSummary } from '../utils/deviceFingerprint.ts';
 import { AttendanceRecord, SessionPublicInfo } from '../types/attendance.ts';
+import { PWAInstallButton } from './PWAInstallButton.tsx';
 
 interface StudentPortalProps {
   onGoToProjector?: () => void;
   onGoToDirectory?: () => void;
   onGoToMyStats?: (jamb?: string) => void;
+  onOpenOnboarding?: () => void;
   activeSession: SessionPublicInfo | null;
   onOpenAdminLogin: () => void;
   isAdminAuthenticated: boolean;
@@ -31,6 +34,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   onGoToProjector,
   onGoToDirectory,
   onGoToMyStats,
+  onOpenOnboarding,
   activeSession,
   onOpenAdminLogin,
   isAdminAuthenticated,
@@ -163,16 +167,24 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     }
   };
 
-  // Demo Student Fast Selection
-  const demoStudents = [
-    { name: 'Chioma Okafor', jamb: '2024/104829AB' },
-    { name: 'David Adeleke', jamb: '2024/108472CD' },
-    { name: 'Ibrahim Mohammed', jamb: '2024/119283EF' },
-    { name: 'Ngozi Blessing Eze', jamb: '2024/129384GH' },
-  ];
+  // Dynamically loaded enrolled students from departmental database
+  const [enrolledStudents, setEnrolledStudents] = useState<Array<{ fullName: string; jambRegNo: string; matricNo?: string }>>([]);
 
-  const handleSelectDemo = (jamb: string) => {
-    setJambRegNo(jamb);
+  const loadEnrolledStudents = async () => {
+    try {
+      const list = await AttendanceApiService.getStudents();
+      setEnrolledStudents(list.slice(0, 5));
+    } catch {
+      setEnrolledStudents([]);
+    }
+  };
+
+  useEffect(() => {
+    loadEnrolledStudents();
+  }, []);
+
+  const handleSelectDemo = (identifier: string) => {
+    setJambRegNo(identifier);
     setErrorMessage(null);
     setErrorCode(null);
     // Focus first PIN box
@@ -283,6 +295,9 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           </div>
         )}
 
+        {/* Install RUN-CyberPass PWA Card */}
+        <PWAInstallButton variant="card" />
+
         {/* Verification Success Pass Card */}
         {resultRecord ? (
           <div className="bg-slate-950 border border-emerald-500/50 rounded-2xl p-6 shadow-xl space-y-5 animate-in fade-in zoom-in-95 duration-200">
@@ -371,13 +386,29 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             onSubmit={handleSubmitCheckIn}
             className="bg-slate-950 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6"
           >
-            <div>
-              <h1 className="text-xl font-bold text-white tracking-tight">
-                Student Check-In
-              </h1>
-              <p className="text-xs text-slate-400 mt-1">
-                Enter your JAMB registration number and the live 4-digit passcode displayed in class.
-              </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <span className="text-[11px] font-mono text-emerald-400 font-semibold uppercase tracking-wider block">
+                  Redeemer's University · Cybersecurity
+                </span>
+                <h1 className="text-xl font-bold text-white tracking-tight mt-0.5">
+                  Student Check-In
+                </h1>
+                <p className="text-xs text-slate-400 mt-1">
+                  Enter your RUN Matriculation number or JAMB number and the live 4-digit PIN displayed in class.
+                </p>
+              </div>
+              {onOpenOnboarding && (
+                <button
+                  type="button"
+                  onClick={onOpenOnboarding}
+                  className="shrink-0 px-2.5 py-1.5 text-xs bg-slate-900 hover:bg-slate-800 text-sky-300 hover:text-white rounded-lg border border-slate-700 transition-colors flex items-center gap-1.5 cursor-pointer"
+                  title="View step-by-step check-in guide and anti-proxy rules"
+                >
+                  <HelpCircle className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Guide</span>
+                </button>
+              )}
             </div>
 
             {/* Error Message Box */}
@@ -394,19 +425,19 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   <p className="font-semibold">{errorMessage}</p>
                   {errorCode === 'INVALID_CODE' && (
                     <p className="text-slate-400">
-                      Tip: Passcodes rotate every 1 minute. Make sure you enter the latest PIN from the projector screen.
+                      Tip: Passcodes rotate every 60 seconds on the projector screen. Make sure you enter the latest PIN.
                     </p>
                   )}
                   {errorCode === 'DEVICE_LOCKED' && (
                     <p className="text-slate-400">
-                      Anti-Proxy Violation: A single device cannot check in for multiple coursemates. Please see the Course Rep for manual review.
+                      Anti-Proxy Violation: A single device cannot sign in for multiple coursemates. Please see the Course Rep for manual review.
                     </p>
                   )}
                 </div>
               </div>
             )}
 
-            {/* JAMB Registration Number Field */}
+            {/* JAMB / RUN Matric Number Field */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <label
@@ -414,7 +445,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   className="text-xs font-semibold uppercase tracking-wider text-slate-300 flex items-center gap-1.5"
                 >
                   <User className="w-3.5 h-3.5 text-emerald-400" />
-                  JAMB Registration Number
+                  RUN Matric No or JAMB Reg No
                 </label>
                 {isLookingUp && (
                   <span className="text-[11px] text-slate-500 flex items-center gap-1 font-mono">
@@ -432,7 +463,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   setJambRegNo(e.target.value.toUpperCase());
                   setErrorMessage(null);
                 }}
-                placeholder="e.g. 2024/104829AB"
+                placeholder="e.g. RUN/CYB/22/0142 or 2024/..."
                 autoComplete="off"
                 autoCorrect="off"
                 spellCheck={false}
@@ -457,39 +488,56 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 </div>
               )}
 
-              {/* Fast Test Student Picker */}
+              {/* Enrolled Student Quick-Picker or Zero State */}
               <div className="pt-1">
-                <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5">
-                  <span className="flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-emerald-400" />
-                    Quick-select demo student:
-                  </span>
-                  {onGoToDirectory && (
-                    <button
-                      type="button"
-                      onClick={onGoToDirectory}
-                      className="text-emerald-400 hover:text-emerald-300 underline font-medium cursor-pointer"
-                    >
-                      Find JAMB in Directory →
-                    </button>
-                  )}
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {demoStudents.map((st) => (
-                    <button
-                      key={st.jamb}
-                      type="button"
-                      onClick={() => handleSelectDemo(st.jamb)}
-                      className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors cursor-pointer ${
-                        jambRegNo === st.jamb
-                          ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
-                          : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
-                      }`}
-                    >
-                      {st.name}
-                    </button>
-                  ))}
-                </div>
+                {enrolledStudents.length > 0 ? (
+                  <>
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 mb-1.5">
+                      <span className="flex items-center gap-1">
+                        <Sparkles className="w-3 h-3 text-emerald-400" />
+                        Quick-fill enrolled student:
+                      </span>
+                      {onGoToDirectory && (
+                        <button
+                          type="button"
+                          onClick={onGoToDirectory}
+                          className="text-emerald-400 hover:text-emerald-300 underline font-medium cursor-pointer"
+                        >
+                          View Full Directory →
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {enrolledStudents.map((st) => (
+                        <button
+                          key={st.jambRegNo}
+                          type="button"
+                          onClick={() => handleSelectDemo(st.matricNo || st.jambRegNo)}
+                          className={`text-[11px] px-2.5 py-1 rounded-lg border transition-colors cursor-pointer ${
+                            jambRegNo === (st.matricNo || st.jambRegNo)
+                              ? 'bg-emerald-500/20 border-emerald-500 text-emerald-300'
+                              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white hover:border-slate-700'
+                          }`}
+                        >
+                          {st.fullName.split(' ')[0]} ({st.matricNo || st.jambRegNo})
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                ) : (
+                  <div className="p-2.5 rounded-xl bg-slate-900/60 border border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+                    <span>No students enrolled in departmental roster yet.</span>
+                    {onGoToDirectory && (
+                      <button
+                        type="button"
+                        onClick={onGoToDirectory}
+                        className="text-emerald-400 hover:text-emerald-300 underline font-medium cursor-pointer ml-2 whitespace-nowrap"
+                      >
+                        Enroll in Directory →
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
 
@@ -569,7 +617,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
             <span>Lecturer & Course Rep Login</span>
           </button>
           <p className="text-[10px] text-slate-600 mt-0.5 font-mono">
-            UniPass NG · Protected University Examination & Attendance Portal
+            RUN-CyberPass · Redeemer's University Cybersecurity Department
           </p>
         </div>
       </div>

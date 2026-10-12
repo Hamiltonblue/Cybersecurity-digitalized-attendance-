@@ -13,6 +13,7 @@ import {
   Lock,
   Copy,
   ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 import { AttendanceApiService } from '../services/api.ts';
 import { Student } from '../types/attendance.ts';
@@ -41,7 +42,7 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
   const [newJamb, setNewJamb] = useState('');
   const [newName, setNewName] = useState('');
   const [newMatric, setNewMatric] = useState('');
-  const [newDepartment, setNewDepartment] = useState('Computer Science');
+  const [newDepartment, setNewDepartment] = useState('Cybersecurity');
   const [newLevel, setNewLevel] = useState('400L');
 
   // CSV Drag & Drop State
@@ -74,16 +75,29 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
     setIsUploadModalOpen(true);
   };
 
-  const handleResetToSeed = async () => {
+  const handleClearAllStudents = async () => {
     if (!isAdminAuthenticated) {
       onRequireAdminAuth();
       return;
     }
-    if (!confirm('Reset the master student list back to the default Nigerian university cohort?')) return;
-    const defaultList = await AttendanceApiService.resetStudents();
-    setStudents(defaultList);
-    setNotification('Roster reset to default accredited 25-student CS cohort.');
-    setTimeout(() => setNotification(null), 3000);
+    if (!confirm('Are you sure you want to completely clear all students from the roster? This provides a 100% clean slate.')) return;
+    await AttendanceApiService.resetStudents();
+    setStudents([]);
+    setNotification('Student roster completely cleared. Ready for fresh departmental entry.');
+    setTimeout(() => setNotification(null), 3500);
+  };
+
+  const handleSeedRunCybCohort = async () => {
+    if (!isAdminAuthenticated) {
+      onRequireAdminAuth();
+      return;
+    }
+    const res = await AttendanceApiService.seedRunCybData();
+    if (res.success) {
+      await loadStudents();
+      setNotification("Loaded Redeemer's University Cybersecurity sample cohort (100L–400L).");
+      setTimeout(() => setNotification(null), 3500);
+    }
   };
 
   const handleAddStudent = async (e: React.FormEvent) => {
@@ -91,14 +105,15 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
     if (!newJamb.trim() || !newName.trim()) return;
 
     try {
+      const currentYearShort = new Date().getFullYear().toString().slice(-2);
       await AttendanceApiService.addStudent({
         jambRegNo: newJamb.trim().toUpperCase(),
         fullName: newName.trim(),
-        matricNo: newMatric.trim().toUpperCase() || `CSC/${Math.floor(1000 + Math.random() * 9000)}`,
-        department: newDepartment.trim(),
-        level: newLevel.trim(),
+        matricNo: newMatric.trim().toUpperCase() || `RUN/CYB/${currentYearShort}/${Math.floor(1000 + Math.random() * 9000)}`,
+        department: newDepartment.trim() || 'Cybersecurity',
+        level: newLevel.trim() || '400L',
       });
-      setNotification(`Added ${newName.trim()} to accredited roster.`);
+      setNotification(`Added ${newName.trim()} to Redeemer's University Cybersecurity roster.`);
       setIsAddModalOpen(false);
       setNewJamb('');
       setNewName('');
@@ -166,14 +181,14 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
     setTimeout(() => setNotification(null), 4000);
   };
 
-  // Download Sample Template CSV
+  // Download Sample Template CSV for Redeemer's University Cybersecurity
   const handleDownloadSampleCsv = () => {
-    const template = 'JAMB Reg No,Student Full Name,Matric No,Department,Level\n2024/991122AA,"Chisom Daniel Okafor",CSC/2020/099,Computer Science,400L\n2024/991133BB,"Zainab Ahmed Shehu",CSC/2020/100,Computer Science,400L\n';
+    const template = 'JAMB Reg No,Student Full Name,Matric No,Department,Level\n2024/778899AA,"Oluwaseun Emmanuel Adeyemi",RUN/CYB/21/0045,Cybersecurity,400L\n2024/778899BB,"Amina Fatima Danjuma",RUN/CYB/21/0088,Cybersecurity,400L\n2024/778899CC,"Chukwuma David Okonkwo",RUN/CYB/22/0112,Cybersecurity,300L\n2024/778899DD,"Blessing Temitope Ajayi",RUN/CYB/22/0145,Cybersecurity,300L\n2024/778899EE,"Favour Chidinma Eze",RUN/CYB/23/0204,Cybersecurity,200L\n2024/778899GG,"Precious Oluwanifemi Williams",RUN/CYB/24/0301,Cybersecurity,100L\n';
     const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'UniPass_Class_Roster_Template.csv';
+    a.download = 'RUN_CyberPass_Class_Roster_Template.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -203,22 +218,22 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
           <div>
             <span className="text-xs font-mono uppercase tracking-widest text-emerald-400 font-semibold block">
-              Accredited Student Directory
+              Redeemer's University · Department of Cybersecurity
             </span>
             <h1 className="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
               <GraduationCap className="w-6 h-6 text-emerald-400" />
-              Class Registry & JAMB Lookup
+              Departmental Student Registry & Directory
             </h1>
             <p className="text-xs text-slate-400 mt-0.5">
-              Public student list for verifying JAMB registration numbers before lecture attendance check-in ({students.length} students enrolled).
+              Accredited student roster across 100L to 400L for lecture attendance verification ({students.length} students enrolled).
             </p>
           </div>
 
-          {/* Action Buttons: Add / Upload CSV / Reset */}
-          <div className="flex flex-wrap items-center gap-2.5">
+          {/* Action Buttons: Add / Upload CSV / Sample Cohort / Clear */}
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleOpenAdd}
-              className={`px-3.5 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer ${
                 isAdminAuthenticated
                   ? 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
                   : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700'
@@ -231,7 +246,7 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
 
             <button
               onClick={handleOpenUpload}
-              className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
               title={isAdminAuthenticated ? 'Bulk upload CSV roster' : 'Requires Course Rep password'}
             >
               {isAdminAuthenticated ? <Upload className="w-4 h-4 text-emerald-400" /> : <Lock className="w-3.5 h-3.5 text-amber-400" />}
@@ -239,14 +254,25 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
             </button>
 
             {isAdminAuthenticated && (
-              <button
-                onClick={handleResetToSeed}
-                className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white rounded-xl text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
-                title="Reset to default Nigerian CS cohort"
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Reset Cohort</span>
-              </button>
+              <>
+                <button
+                  onClick={handleSeedRunCybCohort}
+                  className="px-3 py-2 bg-emerald-950/40 hover:bg-emerald-900/50 text-emerald-300 rounded-xl text-xs font-medium border border-emerald-500/30 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Load Redeemer's University Cybersecurity sample cohort (100L-400L)"
+                >
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Load Sample Cohort</span>
+                </button>
+
+                <button
+                  onClick={handleClearAllStudents}
+                  className="px-3 py-2 bg-slate-800 hover:bg-rose-950/60 text-slate-400 hover:text-rose-300 rounded-xl text-xs font-medium border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Wipe student roster back to clean empty slate"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Clear Roster</span>
+                </button>
+              </>
             )}
           </div>
         </div>
@@ -352,7 +378,16 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
                 ) : (
                   <tr>
                     <td colSpan={7} className="py-12 text-center text-slate-500 text-xs">
-                      No students found matching "{searchQuery}". Try searching by first name or JAMB number.
+                      {students.length === 0 ? (
+                        <div className="space-y-2 py-4">
+                          <p className="text-slate-400 font-medium">No students enrolled in the Cybersecurity roster yet.</p>
+                          <p className="text-[11px] text-slate-500">
+                            Course Representatives can use "Add Student" above to enroll students, or "Upload CSV" to import the class list.
+                          </p>
+                        </div>
+                      ) : (
+                        `No students found matching "${searchQuery}". Try searching by first name or JAMB number.`
+                      )}
                     </td>
                   </tr>
                 )}
@@ -392,7 +427,7 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
                 type="text"
                 value={newJamb}
                 onChange={(e) => setNewJamb(e.target.value.toUpperCase())}
-                placeholder="e.g. 2024/104829AB"
+                placeholder="e.g. 2024/778899AA"
                 required
                 className="w-full h-9 px-3 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:border-emerald-500 uppercase"
               />
@@ -406,7 +441,7 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
                 type="text"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
-                placeholder="e.g. Chioma Grace Okafor"
+                placeholder="e.g. Oluwaseun Emmanuel Adeyemi"
                 required
                 className="w-full h-9 px-3 rounded-lg bg-slate-900 border border-slate-700 text-white text-xs focus:border-emerald-500"
               />
@@ -415,13 +450,13 @@ export const RosterManager: React.FC<RosterManagerProps> = ({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-slate-300">
-                  Matric Number
+                  RUN Matric Number
                 </label>
                 <input
                   type="text"
                   value={newMatric}
                   onChange={(e) => setNewMatric(e.target.value.toUpperCase())}
-                  placeholder="e.g. CSC/2020/001"
+                  placeholder="e.g. RUN/CYB/21/0045"
                   className="w-full h-9 px-3 rounded-lg bg-slate-900 border border-slate-700 text-white font-mono text-xs focus:border-emerald-500 uppercase"
                 />
               </div>

@@ -90,7 +90,7 @@ export const ProjectorView: React.FC<ProjectorViewProps> = ({
   const strokeDashoffset = 283 * (1 - progressRatio); // 2 * PI * 45 ≈ 283
 
   // Current app URL for QR code
-  const checkInUrl = typeof window !== 'undefined' ? window.location.origin : 'https://unipass.ng';
+  const checkInUrl = typeof window !== 'undefined' ? window.location.origin : 'https://run-cyberpass.edu.ng';
 
   return (
     <div className="min-h-screen bg-[#070A11] text-white flex flex-col justify-between selection:bg-emerald-500/30 overflow-hidden font-sans">
@@ -107,13 +107,13 @@ export const ProjectorView: React.FC<ProjectorViewProps> = ({
 
           <div>
             <span className="text-xs uppercase tracking-widest text-emerald-400 font-mono font-bold block">
-              Lecture Hall Display · Projector Mode
+              Redeemer's University · Department of Cybersecurity
             </span>
             <h1 className="text-base sm:text-lg font-bold text-slate-100 flex items-center gap-2">
-              <span>{session?.courseCode || 'CSC 401'}</span>
+              <span>{session?.courseCode || 'RUN-CyberPass'}</span>
               <span className="text-slate-500 font-normal">·</span>
               <span className="text-slate-400 font-normal text-sm sm:text-base truncate max-w-xs sm:max-w-md">
-                {session?.courseTitle || 'Distributed Computing'}
+                {session?.courseTitle || 'Live Classroom Projection'}
               </span>
             </h1>
           </div>
@@ -350,12 +350,12 @@ export const ProjectorView: React.FC<ProjectorViewProps> = ({
       {/* Projector Footer Info */}
       <footer className="px-6 py-3 border-t border-slate-800/80 bg-slate-950/80 text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
         <div className="flex items-center gap-3">
-          <span>Student Check-In Portal: <strong className="text-slate-300 font-mono">{checkInUrl}</strong></span>
+          <span>Student Check-In: <strong className="text-slate-300 font-mono">{checkInUrl}</strong></span>
           <span aria-hidden="true">·</span>
           <span>Single-device session lock active</span>
         </div>
-        <div className="font-mono text-[11px] text-slate-400">
-          UniPass Nigeria · Verified Institutional Engine
+        <div className="font-mono text-[11px] text-emerald-400">
+          RUN-CyberPass · Redeemer's University Cybersecurity Department
         </div>
       </footer>
 

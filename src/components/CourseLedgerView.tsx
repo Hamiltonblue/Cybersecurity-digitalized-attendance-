@@ -29,7 +29,7 @@ export const CourseLedgerView: React.FC<CourseLedgerViewProps> = ({
   activeSession,
 }) => {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [selectedCourseId, setSelectedCourseId] = useState<string>('course-csc401');
+  const [selectedCourseId, setSelectedCourseId] = useState<string>('');
   const [ledger, setLedger] = useState<CourseLedger | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
@@ -42,9 +42,10 @@ export const CourseLedgerView: React.FC<CourseLedgerViewProps> = ({
       const res = await AttendanceApiService.getCourses();
       if (res.courses && res.courses.length > 0) {
         setCourses(res.courses);
-        if (!selectedCourseId) {
-          setSelectedCourseId(res.courses[0].id);
-        }
+        setSelectedCourseId(prev => prev || res.courses[0].id);
+      } else {
+        setCourses([]);
+        setLedger(null);
       }
     } catch {
       // Ignore
@@ -159,31 +160,37 @@ export const CourseLedgerView: React.FC<CourseLedgerViewProps> = ({
           </div>
         </div>
 
-        {/* Course Pills */}
-        <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-800/80 overflow-x-auto pb-1">
-          {courses.map((c) => {
-            const isSelected = selectedCourseId === c.id;
-            const isLive = activeSession?.courseCode.toUpperCase() === c.code.toUpperCase();
+        {/* Course Pills or Empty Note */}
+        {courses.length > 0 ? (
+          <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-800/80 overflow-x-auto pb-1">
+            {courses.map((c) => {
+              const isSelected = selectedCourseId === c.id;
+              const isLive = activeSession?.courseCode.toUpperCase() === c.code.toUpperCase();
 
-            return (
-              <button
-                key={c.id}
-                onClick={() => setSelectedCourseId(c.id)}
-                className={`px-3 py-2 rounded-xl text-xs font-medium transition-all shrink-0 flex items-center gap-2 cursor-pointer ${
-                  isSelected
-                    ? 'bg-emerald-600 text-white shadow-md font-semibold'
-                    : 'bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
-                }`}
-              >
-                <span className="font-mono">{c.code}</span>
-                <span className="text-[11px] opacity-80">({c.totalLectures} Lecs)</span>
-                {isLive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
-                )}
-              </button>
-            );
-          })}
-        </div>
+              return (
+                <button
+                  key={c.id}
+                  onClick={() => setSelectedCourseId(c.id)}
+                  className={`px-3 py-2 rounded-xl text-xs font-medium transition-all shrink-0 flex items-center gap-2 cursor-pointer ${
+                    isSelected
+                      ? 'bg-emerald-600 text-white shadow-md font-semibold'
+                      : 'bg-slate-900 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <span className="font-mono">{c.code}</span>
+                  <span className="text-[11px] opacity-80">({c.totalLectures} Lecs)</span>
+                  {isLive && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-300 animate-ping" />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-5 pt-4 border-t border-slate-800/80 text-xs text-slate-500 font-mono">
+            0 courses registered in Redeemer's University Cybersecurity database.
+          </div>
+        )}
       </div>
 
       {/* Loading state */}
@@ -191,6 +198,23 @@ export const CourseLedgerView: React.FC<CourseLedgerViewProps> = ({
         <div className="p-8 text-center bg-slate-950 border border-slate-800 rounded-2xl">
           <RefreshCw className="w-6 h-6 animate-spin text-emerald-400 mx-auto mb-2" />
           <p className="text-sm text-slate-400">Loading course ledger & session history...</p>
+        </div>
+      )}
+
+      {/* Zero Courses Empty State */}
+      {!isLoading && courses.length === 0 && (
+        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-10 text-center max-w-xl mx-auto space-y-4 my-6">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto">
+            <BookOpen className="w-7 h-7" />
+          </div>
+          <div className="space-y-1.5">
+            <h3 className="text-base font-bold text-white tracking-tight">
+              No Cybersecurity Courses Registered Yet
+            </h3>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Course Representatives or Departmental Lecturers can register their first Cybersecurity course (e.g., <span className="text-emerald-400 font-mono">CYB 401</span>, <span className="text-emerald-400 font-mono">CYB 301</span>, <span className="text-emerald-400 font-mono">CYB 201</span>) in the Session Configuration tab to begin running lecture sessions and tracking Senate 75% exam clearance.
+            </p>
+          </div>
         </div>
       )}
 

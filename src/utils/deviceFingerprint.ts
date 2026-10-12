@@ -39,9 +39,9 @@ function getCanvasFingerprint(): string {
     ctx.fillStyle = '#f60';
     ctx.fillRect(125, 1, 62, 20);
     ctx.fillStyle = '#069';
-    ctx.fillText('UniPass-NG-Secured:🎓', 2, 15);
+    ctx.fillText('RUN-CyberPass-Secured:🎓', 2, 15);
     ctx.fillStyle = 'rgba(102, 204, 0, 0.7)';
-    ctx.fillText('UniPass-NG-Secured:🎓', 4, 17);
+    ctx.fillText('RUN-CyberPass-Secured:🎓', 4, 17);
 
     return fnv1a(canvas.toDataURL());
   } catch {
